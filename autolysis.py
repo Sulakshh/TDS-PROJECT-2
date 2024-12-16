@@ -13,7 +13,18 @@ def validate_environment():
         print("Error: AIPROXY_TOKEN environment variable is missing.")
         sys.exit(1)
 
+def create_output_structure(base_name):
+    # Create base directory
+    if not os.path.exists(base_name):
+        os.makedirs(base_name)
+
+    return base_name
+
 def analyze_dataset(file_path):
+    # Extract dataset name
+    dataset_name = os.path.splitext(os.path.basename(file_path))[0]
+    output_dir = create_output_structure(dataset_name)
+
     # Load the dataset
     try:
         df = pd.read_csv(file_path)
@@ -22,21 +33,21 @@ def analyze_dataset(file_path):
         sys.exit(1)
 
     # Describe the dataset
-    describe_data(df)
+    describe_data(df, output_dir)
 
     # Visualize the dataset
-    create_visualizations(df)
+    create_visualizations(df, output_dir)
 
     # Predict a target if possible
     if detect_target_column(df):
-        predict_target(df)
+        predict_target(df, output_dir)
     
     # Generate the README.md file
-    generate_readme()
+    generate_readme(output_dir)
 
 # Step 1: Descriptive Analysis
 
-def describe_data(df):
+def describe_data(df, output_dir):
     print("\nBasic Information About the Dataset:\n")
     info_buf = []
     df.info(buf=info_buf)
@@ -64,7 +75,7 @@ def describe_data(df):
 
 # Step 2: Visualization
 
-def create_visualizations(df):
+def create_visualizations(df, output_dir):
     global readme_content
 
     try:
@@ -74,7 +85,7 @@ def create_visualizations(df):
             plt.figure(figsize=(10, 8))
             sns.heatmap(numeric_cols.corr(), annot=True, cmap="coolwarm")
             plt.title("Correlation Heatmap")
-            heatmap_path = "heatmap.png"
+            heatmap_path = os.path.join(output_dir, "heatmap.png")
             plt.savefig(heatmap_path)
             plt.close()
             readme_content += (
@@ -88,7 +99,7 @@ def create_visualizations(df):
             plt.figure(figsize=(8, 6))
             sns.histplot(df[col], kde=True, bins=30)
             plt.title(f"Distribution of {col}")
-            dist_path = f"{col}_distribution.png"
+            dist_path = os.path.join(output_dir, f"{col}_distribution.png")
             plt.savefig(dist_path)
             plt.close()
             readme_content += (
@@ -105,7 +116,7 @@ def detect_target_column(df):
     numeric_cols = df.select_dtypes(include=['number'])
     return numeric_cols.shape[1] > 1  # Ensure there are enough numeric columns for prediction
 
-def predict_target(df):
+def predict_target(df, output_dir):
     global readme_content
 
     numeric_cols = df.select_dtypes(include=['number'])
@@ -139,7 +150,7 @@ def predict_target(df):
 
 # Step 4: Generate README.md
 
-def generate_readme():
+def generate_readme(output_dir):
     global readme_content
     readme_content = (
         "# Automated Dataset Analysis\n\n"
@@ -152,9 +163,10 @@ def generate_readme():
         "- Apply the predictive model for operational decision-making in relevant domains.\n"
     )
 
-    with open("README.md", "w") as f:
+    readme_path = os.path.join(output_dir, "README.md")
+    with open(readme_path, "w") as f:
         f.write(readme_content)
-    print("README.md file generated successfully.")
+    print(f"README.md file generated successfully at {readme_path}.")
 
 # Main Function
 if __name__ == "__main__":
